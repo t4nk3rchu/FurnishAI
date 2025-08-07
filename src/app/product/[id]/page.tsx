@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { products } from '@/lib/data';
+import { getProduct, getProducts } from '@/lib/firestore';
 import Header from '@/components/header';
 import ProductDetailClient from '@/components/product-detail-client';
 
@@ -9,8 +9,8 @@ interface ProductPageProps {
   };
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
-  const product = products.find(p => p.id === params.id);
+export default async function ProductPage({ params }: ProductPageProps) {
+  const product = await getProduct(params.id);
 
   if (!product) {
     notFound();
@@ -32,6 +32,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 }
 
 export async function generateStaticParams() {
+  const products = await getProducts();
   return products.map(product => ({
     id: product.id,
   }));

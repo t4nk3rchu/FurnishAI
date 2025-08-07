@@ -1,3 +1,6 @@
+// This file is no longer in use. Product data is now fetched from Firestore.
+// You can delete this file if you no longer need this sample data.
+
 import type { Product } from './types';
 
 export const products: Product[] = [

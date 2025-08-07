@@ -1,8 +1,9 @@
 import Header from '@/components/header';
 import CatalogClient from '@/components/catalog-client';
-import { products } from '@/lib/data';
+import { getProducts } from '@/lib/firestore';
 
-export default function Home() {
+export default async function Home() {
+  const products = await getProducts();
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
