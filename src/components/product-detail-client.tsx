@@ -47,6 +47,8 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       reset();
     }
   };
+  
+  const imageUrl = product.imageUrl || 'https://placehold.co/800x600.png';
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -54,7 +56,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         <div>
           <Card className="overflow-hidden">
             <Image
-              src={product.imageUrl}
+              src={imageUrl}
               alt={product.name}
               width={800}
               height={600}
