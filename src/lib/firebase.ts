@@ -4,13 +4,15 @@ import {getFirestore} from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: '<YOUR_API_KEY>',
-  authDomain: '<YOUR_AUTH_DOMAIN>',
-  projectId: '<YOUR_PROJECT_ID>',
-  storageBucket: '<YOUR_STORAGE_BUCKET>',
-  messagingSenderId: '<YOUR_MESSAGING_SENDER_ID>',
-  appId: '<YOUR_APP_ID>',
+  apiKey: "AIzaSyDyWRDfCzDYxLPyNBpc1Kop6go9-bQnd38",
+  authDomain: "custom-engage-suite.firebaseapp.com",
+  projectId: "custom-engage-suite",
+  storageBucket: "custom-engage-suite.firebasestorage.app",
+  messagingSenderId: "485949498649",
+  appId: "1:485949498649:web:51c2eee9073a17f772d188",
+  measurementId: "G-BHVT9H8Q8W"
 };
+
 
 // Initialize Firebase
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
