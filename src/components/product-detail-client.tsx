@@ -48,7 +48,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     }
   };
   
-  const imageUrl = product.imageUrl || 'https://storage.googleapis.com/customer-experience-modernization/image/Firefly%20desk%20at%20home%2070629.jpg';
+  const imageUrl = product.imageUrl || 'https://placehold.co/800x600.png';
 
   return (
     <div className="container mx-auto px-4 py-12">
