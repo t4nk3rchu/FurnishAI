@@ -18,7 +18,7 @@ const SnapshotSchema = z.object({
   categories: z.array(z.string()),
   description: z.string(),
   features: z.array(z.string()),
-  id: z.string(),
+  id: z.number(),
   image: z.string(),
   price: z.number(),
   quantity: z.number(),
@@ -71,29 +71,17 @@ const getChatHistoryFlow = ai.defineFlow(
       const conversationData = data.conversation || [];
 
       // Validate and structure the data using Zod schemas.
-      const conversation = conversationData.map((entry: any) => ({
-        author: entry.author,
-        message: entry.message,
-        results: (entry.results || []).map((result: any) => ({
-          id: result.id,
-          snapshot: {
-            categories: result.snapshot.categories || [],
-            description: result.snapshot.description,
-            features: result.snapshot.features || [],
-            id: result.snapshot.id,
-            image: result.snapshot.image,
-            price: result.snapshot.price,
-            quantity: result.snapshot.quantity,
-            title: result.snapshot.title,
-          },
-        })),
-      }));
+      const conversation = conversationData.map((entry: any) => {
+        return ConversationEntrySchema.parse(entry);
+      });
 
       return { conversation };
     } catch (error) {
       console.error('Error fetching chat history from Firestore:', error);
-      // Return an empty conversation in case of an error.
-      return { conversation: [] };
+      if (error instanceof z.ZodError) {
+        console.error('Zod validation error details:', error.errors);
+      }
+      throw error;
     }
   }
 );

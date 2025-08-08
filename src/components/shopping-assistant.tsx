@@ -62,7 +62,11 @@ export default function ShoppingAssistant() {
             return result;
           }
         }
-      } catch (e) {
+      } catch (e: any) {
+        // If we get a 500, we should stop polling and report the error
+        if (e.message.includes('500')) {
+          throw new Error('Server error while fetching chat history.');
+        }
         console.log(`Polling attempt ${i + 1} failed. Retrying in ${delay}ms...`);
       }
       await new Promise(resolve => setTimeout(resolve, delay));
@@ -91,7 +95,8 @@ export default function ShoppingAssistant() {
           method: 'POST',
           headers: {
             'accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
           },
           body: JSON.stringify({
             visitor_id: "string",
@@ -117,7 +122,8 @@ export default function ShoppingAssistant() {
           method: 'POST',
           headers: {
             'accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
           },
           body: JSON.stringify({
             visitor_id: "string",
@@ -160,7 +166,7 @@ export default function ShoppingAssistant() {
     }
   }
 
-  const transformToProduct = (result: GetChatHistoryOutput['conversation'][0]['results'][0]): Product => {
+  const transformToProduct = (result: NonNullable<GetChatHistoryOutput['conversation'][0]['results']>[0]): Product => {
     return {
       id: result.id,
       name: result.snapshot.title,
