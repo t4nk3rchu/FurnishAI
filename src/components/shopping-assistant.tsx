@@ -13,7 +13,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { productRecommendation } from '@/ai/flows/product-recommendation';
 import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -56,10 +55,31 @@ export default function ShoppingAssistant() {
     setMessages((prev) => [...prev, { role: 'user', content: data.query }]);
     
     try {
-      const result = await productRecommendation({query: data.query});
-      setMessages((prev) => [...prev, { role: 'assistant', content: result.recommendations }]);
+      const response = await fetch('https://18af87c54f8403a44bad9088b554b3a4.serveo.net/p1/initiate-vertexai-search', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          visitor_id: "string",
+          query: data.query,
+          image: "",
+          search_doc_id: "",
+          user_id: "1"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const result = await response.json();
+      // Assuming the API returns a response with a 'message' or similar field
+      const assistantMessage = result.message || result.answer || JSON.stringify(result, null, 2);
+      setMessages((prev) => [...prev, { role: 'assistant', content: assistantMessage }]);
     } catch (e) {
-      setError('Sorry, I had trouble finding recommendations. Please try again.');
+      setError('Sorry, I had trouble getting a response. Please try again.');
       console.error(e);
     } finally {
       setIsLoading(false);
