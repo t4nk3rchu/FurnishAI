@@ -50,10 +50,10 @@ export default function ShoppingAssistant() {
     }
   }, [messages, isLoading]);
 
-  const pollForChatHistory = async (searchDocId: string, retries = 5, delay = 1000): Promise<GetChatHistoryOutput> => {
+  const pollForChatHistory = async (document_id: string, retries = 5, delay = 1000): Promise<GetChatHistoryOutput> => {
     for (let i = 0; i < retries; i++) {
       try {
-        const result = await getChatHistory({ searchDocId });
+        const result = await getChatHistory({ document_id });
         if (result && result.conversation.length > 0) {
           return result;
         }
@@ -98,14 +98,14 @@ export default function ShoppingAssistant() {
       }
 
       const result = await apiResponse.json();
-      const searchDocId = result.search_doc_id;
+      const document_id = result.document_id;
 
-      if (!searchDocId) {
-        throw new Error('API did not return a search_doc_id');
+      if (!document_id) {
+        throw new Error('API did not return a document_id');
       }
 
       setIsPolling(true);
-      const chatHistory = await pollForChatHistory(searchDocId);
+      const chatHistory = await pollForChatHistory(document_id);
       
       const newMessages = chatHistory.conversation.map(c => ({
           author: c.author,

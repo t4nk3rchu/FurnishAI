@@ -37,7 +37,7 @@ const ConversationEntrySchema = z.object({
 });
 
 const GetChatHistoryInputSchema = z.object({
-  searchDocId: z.string().describe('The ID of the document to retrieve from the website_search collection.'),
+  document_id: z.string().describe('The ID of the document to retrieve from the website_search collection.'),
 });
 export type GetChatHistoryInput = z.infer<typeof GetChatHistoryInputSchema>;
 
@@ -56,9 +56,9 @@ const getChatHistoryFlow = ai.defineFlow(
     inputSchema: GetChatHistoryInputSchema,
     outputSchema: GetChatHistoryOutputSchema,
   },
-  async ({searchDocId}) => {
+  async ({document_id}) => {
     try {
-      const docRef = doc(db, 'website_search', searchDocId);
+      const docRef = doc(db, 'website_search', document_id);
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
