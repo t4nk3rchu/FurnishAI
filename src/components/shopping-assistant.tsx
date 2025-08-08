@@ -56,10 +56,11 @@ export default function ShoppingAssistant() {
       try {
         const result = await getChatHistory({ document_id });
         if (result && result.conversation.length > initialMessageCount) {
-           const lastMessage = result.conversation[result.conversation.length - 1];
-           if (lastMessage.author !== 'user') {
+          const lastMessage = result.conversation[result.conversation.length - 1];
+          // Check if the last message is from the assistant, which means a response has been added.
+          if (lastMessage.author !== 'user') {
             return result;
-           }
+          }
         }
       } catch (e) {
         console.log(`Polling attempt ${i + 1} failed. Retrying in ${delay}ms...`);
@@ -110,6 +111,22 @@ export default function ShoppingAssistant() {
           throw new Error('API did not return a document_id');
         }
         setSearchDocId(docId);
+      } else {
+        // This is a follow-up, so we need to send the existing docId
+        await fetch('https://18af87c54f8403a44bad9088b554b3a4.serveo.net/p1/initiate-vertexai-search', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            visitor_id: "string",
+            query: data.query,
+            image: "",
+            search_doc_id: docId,
+            user_id: "1"
+          })
+        });
       }
 
       setIsPolling(true);
