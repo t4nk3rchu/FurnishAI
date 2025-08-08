@@ -14,7 +14,7 @@ export async function getProducts(): Promise<Product[]> {
         category: data.category,
         price: data.price,
         description: data.description,
-        imageUrl: data.imageUrl,
+        imageUrl: data.image,
         reviews: data.reviews || [],
       } as Product;
     });
@@ -43,7 +43,7 @@ export async function getProduct(id: string): Promise<Product | null> {
         category: data.category,
         price: data.price,
         description: data.description,
-        imageUrl: data.imageUrl,
+        imageUrl: data.image,
         reviews: data.reviews || [],
       } as Product;
     } else {
