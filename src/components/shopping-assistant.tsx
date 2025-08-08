@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import { Bot, Search, Sparkles, User } from 'lucide-react';
+import { Bot, Search, Sparkles, User, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,19 +17,24 @@ import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
+import { getChatHistory, type GetChatHistoryOutput } from '@/ai/flows/get-chat-history';
+import ProductCard from './product-card';
+import type { Product } from '@/lib/types';
 
 type Inputs = {
   query: string;
 };
 
 interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+  author: string;
+  message: string;
+  results?: GetChatHistoryOutput['conversation'][0]['results'];
 }
 
 export default function ShoppingAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,19 +48,37 @@ export default function ShoppingAssistant() {
         behavior: 'smooth',
       });
     }
-  }, [messages]);
+  }, [messages, isLoading]);
+
+  const pollForChatHistory = async (searchDocId: string, retries = 5, delay = 1000): Promise<GetChatHistoryOutput> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const result = await getChatHistory({ searchDocId });
+        if (result && result.conversation.length > 0) {
+          return result;
+        }
+      } catch (e) {
+        console.log(`Polling attempt ${i + 1} failed. Retrying in ${delay}ms...`);
+      }
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    throw new Error('Failed to retrieve chat history after several attempts.');
+  }
   
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    if (messages.length === 0) {
+    if (!isOpen) {
       setIsOpen(true);
+      // Clear previous conversation when starting a new one
+      setMessages([]); 
     }
     
     setIsLoading(true);
     setError(null);
-    setMessages((prev) => [...prev, { role: 'user', content: data.query }]);
+    setMessages((prev) => [...prev, { author: 'user', message: data.query }]);
+    reset();
     
     try {
-      const response = await fetch('https://18af87c54f8403a44bad9088b554b3a4.serveo.net/p1/initiate-vertexai-search', {
+      const apiResponse = await fetch('https://18af87c54f8403a44bad9088b554b3a4.serveo.net/p1/initiate-vertexai-search', {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -70,20 +93,37 @@ export default function ShoppingAssistant() {
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
+      if (!apiResponse.ok) {
+        throw new Error('Network response from search API was not ok');
       }
 
-      const result = await response.json();
-      // Assuming the API returns a response with a 'message' or similar field
-      const assistantMessage = result.message || result.answer || JSON.stringify(result, null, 2);
-      setMessages((prev) => [...prev, { role: 'assistant', content: assistantMessage }]);
+      const result = await apiResponse.json();
+      const searchDocId = result.search_doc_id;
+
+      if (!searchDocId) {
+        throw new Error('API did not return a search_doc_id');
+      }
+
+      setIsPolling(true);
+      const chatHistory = await pollForChatHistory(searchDocId);
+      
+      const newMessages = chatHistory.conversation.map(c => ({
+          author: c.author,
+          message: c.message,
+          results: c.results,
+      }));
+      
+      // Replace the user's initial prompt with the full conversation history
+      setMessages(newMessages);
+
     } catch (e) {
       setError('Sorry, I had trouble getting a response. Please try again.');
       console.error(e);
+      // Add error message as assistant response
+       setMessages((prev) => [...prev, { author: 'assistant', message: 'Sorry, I had trouble getting a response. Please try again.' }]);
     } finally {
       setIsLoading(false);
-      reset();
+      setIsPolling(false);
     }
   };
 
@@ -94,6 +134,18 @@ export default function ShoppingAssistant() {
       setError(null);
     }
   }
+
+  const transformToProduct = (result: GetChatHistoryOutput['conversation'][0]['results'][0]): Product => {
+    return {
+      id: result.id,
+      name: result.snapshot.title,
+      price: result.snapshot.price,
+      description: result.snapshot.description,
+      category: result.snapshot.categories[0] as Product['category'] || 'Tables',
+      imageUrl: result.snapshot.image,
+      reviews: [],
+    };
+  };
 
   return (
     <>
@@ -119,27 +171,38 @@ export default function ShoppingAssistant() {
           <ScrollArea className="flex-1 -mx-6 px-6" ref={scrollAreaRef}>
             <div className="py-4 space-y-6 pr-4">
               {messages.map((message, index) => (
-                <div key={index} className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  {message.role === 'assistant' && (
-                     <Avatar className="h-8 w-8">
-                       <AvatarFallback className="bg-primary text-primary-foreground">
-                         <Bot className="h-5 w-5" />
-                       </AvatarFallback>
-                     </Avatar>
-                  )}
-                  <div className={cn("p-3 rounded-lg max-w-[80%]", message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary')}>
-                    <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                <div key={index}>
+                  <div className={cn("flex items-start gap-3", message.author === 'user' ? 'justify-end' : 'justify-start')}>
+                    {message.author !== 'user' && (
+                       <Avatar className="h-8 w-8">
+                         <AvatarFallback className="bg-primary text-primary-foreground">
+                           <Bot className="h-5 w-5" />
+                         </AvatarFallback>
+                       </Avatar>
+                    )}
+                    {message.message && (
+                        <div className={cn("p-3 rounded-lg max-w-[80%]", message.author === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary')}>
+                        <p className="whitespace-pre-wrap text-sm">{message.message}</p>
+                        </div>
+                    )}
+                     {message.author === 'user' && (
+                       <Avatar className="h-8 w-8">
+                         <AvatarFallback>
+                           <User className="h-5 w-5" />
+                         </AvatarFallback>
+                       </Avatar>
+                    )}
                   </div>
-                   {message.role === 'user' && (
-                     <Avatar className="h-8 w-8">
-                       <AvatarFallback>
-                         <User className="h-5 w-5" />
-                       </AvatarFallback>
-                     </Avatar>
+                  {message.results && message.results.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {message.results.map(result => (
+                         <ProductCard key={result.id} product={transformToProduct(result)} />
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
-               {isLoading && (
+               {(isLoading || isPolling) && (
                 <div className="flex items-start gap-3 justify-start">
                    <Avatar className="h-8 w-8">
                      <AvatarFallback className="bg-primary text-primary-foreground">
@@ -161,9 +224,9 @@ export default function ShoppingAssistant() {
                 {...register('query', { required: true })}
                 placeholder="Ask a follow-up question..."
                 className="pr-12"
-                disabled={isLoading}
+                disabled={isLoading || isPolling}
               />
-              <Button type="submit" size="icon" className="absolute right-1 top-1 h-8 w-8" disabled={isLoading}>
+              <Button type="submit" size="icon" className="absolute right-1 top-1 h-8 w-8" disabled={isLoading || isPolling}>
                  <Sparkles className="h-4 w-4" />
                  <span className="sr-only">Send</span>
               </Button>
