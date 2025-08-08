@@ -51,7 +51,7 @@ export default function ShoppingAssistant() {
     }
   }, [messages, isLoading]);
 
-  const pollForChatHistory = async (document_id: string, retries = 10, delay = 5000): Promise<GetChatHistoryOutput> => {
+  const pollForChatHistory = async (document_id: string, retries = 10, delay = 1500): Promise<GetChatHistoryOutput> => {
     for (let i = 0; i < retries; i++) {
       try {
         const result = await getChatHistory({ document_id });
