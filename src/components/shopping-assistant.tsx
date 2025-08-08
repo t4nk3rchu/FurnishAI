@@ -51,11 +51,11 @@ export default function ShoppingAssistant() {
     }
   }, [messages, isLoading]);
 
-  const pollForChatHistory = async (document_id: string, initialMessageCount: number, retries = 10, delay = 1500): Promise<GetChatHistoryOutput> => {
+  const pollForChatHistory = async (document_id: string, retries = 10, delay = 1500): Promise<GetChatHistoryOutput> => {
     for (let i = 0; i < retries; i++) {
       try {
         const result = await getChatHistory({ document_id });
-        if (result && result.conversation.length > initialMessageCount) {
+        if (result && result.conversation.length > 0) {
           const lastMessage = result.conversation[result.conversation.length - 1];
           // Check if the last message is from the assistant, which means a response has been added.
           if (lastMessage.author !== 'user') {
@@ -77,7 +77,6 @@ export default function ShoppingAssistant() {
       setSearchDocId(null);
     }
 
-    const currentMessageCount = messages.length;
     setMessages((prev) => [...prev, { author: 'user', message: data.query }]);
     setIsLoading(true);
     setError(null);
@@ -130,7 +129,7 @@ export default function ShoppingAssistant() {
       }
 
       setIsPolling(true);
-      const chatHistory = await pollForChatHistory(docId, currentMessageCount + 1);
+      const chatHistory = await pollForChatHistory(docId);
 
       const newMessages = chatHistory.conversation.map(c => ({
           author: c.author,
