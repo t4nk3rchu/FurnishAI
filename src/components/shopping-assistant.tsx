@@ -77,7 +77,8 @@ export default function ShoppingAssistant() {
       setSearchDocId(null);
     }
 
-    setMessages((prev) => [...prev, { author: 'user', message: data.query }]);
+    const currentMessages = [...messages, { author: 'user', message: data.query }];
+    setMessages(currentMessages);
     setIsLoading(true);
     setError(null);
     reset();
