@@ -54,7 +54,8 @@ export default function ShoppingAssistant() {
     for (let i = 0; i < retries; i++) {
       try {
         const result = await getChatHistory({ document_id });
-        if (result && result.conversation.length > 0) {
+        // Check if the conversation has more than one entry, or if the first entry is from the assistant
+        if (result && result.conversation.length > 1 || (result.conversation.length === 1 && result.conversation[0].author !== 'user')) {
           return result;
         }
       } catch (e) {
