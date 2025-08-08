@@ -37,6 +37,7 @@ export default function ShoppingAssistant() {
   const [isPolling, setIsPolling] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [searchDocId, setSearchDocId] = useState<string | null>(null);
 
   const { register, handleSubmit, reset } = useForm<Inputs>();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -50,13 +51,15 @@ export default function ShoppingAssistant() {
     }
   }, [messages, isLoading]);
 
-  const pollForChatHistory = async (document_id: string, retries = 5, delay = 1000): Promise<GetChatHistoryOutput> => {
+  const pollForChatHistory = async (document_id: string, initialMessageCount: number, retries = 10, delay = 1500): Promise<GetChatHistoryOutput> => {
     for (let i = 0; i < retries; i++) {
       try {
         const result = await getChatHistory({ document_id });
-        // Check if the conversation has more than one entry, or if the first entry is from the assistant
-        if (result && result.conversation.length > 1 || (result.conversation.length === 1 && result.conversation[0].author !== 'user')) {
-          return result;
+        if (result && result.conversation.length > initialMessageCount) {
+           const lastMessage = result.conversation[result.conversation.length - 1];
+           if (lastMessage.author !== 'user') {
+            return result;
+           }
         }
       } catch (e) {
         console.log(`Polling attempt ${i + 1} failed. Retrying in ${delay}ms...`);
@@ -65,74 +68,78 @@ export default function ShoppingAssistant() {
     }
     throw new Error('Failed to retrieve chat history after several attempts.');
   }
-  
+
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     if (!isOpen) {
       setIsOpen(true);
-      // Clear previous conversation when starting a new one
-      setMessages([]); 
+      setMessages([]);
+      setSearchDocId(null);
     }
-    
+
+    const currentMessageCount = messages.length;
+    setMessages((prev) => [...prev, { author: 'user', message: data.query }]);
     setIsLoading(true);
     setError(null);
-    setMessages((prev) => [...prev, { author: 'user', message: data.query }]);
     reset();
-    
+
     try {
-      const apiResponse = await fetch('https://18af87c54f8403a44bad9088b554b3a4.serveo.net/p1/initiate-vertexai-search', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          visitor_id: "string",
-          query: data.query,
-          image: "",
-          search_doc_id: "",
-          user_id: "1"
-        })
-      });
+      let docId = searchDocId;
+      // If we don't have a docId, this is a new conversation
+      if (!docId) {
+        const apiResponse = await fetch('https://18af87c54f8403a44bad9088b554b3a4.serveo.net/p1/initiate-vertexai-search', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            visitor_id: "string",
+            query: data.query,
+            image: "",
+            search_doc_id: "",
+            user_id: "1"
+          })
+        });
 
-      if (!apiResponse.ok) {
-        throw new Error('Network response from search API was not ok');
-      }
-
-      const result = await apiResponse.json();
-      const document_id = result.document_id;
-
-      if (!document_id) {
-        throw new Error('API did not return a document_id');
+        if (!apiResponse.ok) {
+          throw new Error('Network response from search API was not ok');
+        }
+        const result = await apiResponse.json();
+        docId = result.document_id;
+        if (!docId) {
+          throw new Error('API did not return a document_id');
+        }
+        setSearchDocId(docId);
       }
 
       setIsPolling(true);
-      const chatHistory = await pollForChatHistory(document_id);
-      
+      const chatHistory = await pollForChatHistory(docId, currentMessageCount + 1);
+
       const newMessages = chatHistory.conversation.map(c => ({
           author: c.author,
           message: c.message,
           results: c.results,
       }));
-      
-      // Replace the user's initial prompt with the full conversation history
+
       setMessages(newMessages);
 
     } catch (e) {
       setError('Sorry, I had trouble getting a response. Please try again.');
       console.error(e);
-      // Add error message as assistant response
-       setMessages((prev) => [...prev, { author: 'assistant', message: 'Sorry, I had trouble getting a response. Please try again.' }]);
+      setMessages((prev) => [...prev.slice(0, -1), { author: 'assistant', message: 'Sorry, I had trouble getting a response. Please try again.' }]);
     } finally {
       setIsLoading(false);
       setIsPolling(false);
     }
   };
 
+
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
       setMessages([]);
       setError(null);
+      setSearchDocId(null);
     }
   }
 
@@ -203,7 +210,7 @@ export default function ShoppingAssistant() {
                   )}
                 </div>
               ))}
-               {(isLoading || isPolling) && (
+               {(isLoading || isPolling) && !error && (
                 <div className="flex items-start gap-3 justify-start">
                    <Avatar className="h-8 w-8">
                      <AvatarFallback className="bg-primary text-primary-foreground">
@@ -216,7 +223,6 @@ export default function ShoppingAssistant() {
                   </div>
                 </div>
               )}
-              {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
           </ScrollArea>
           <DialogFooter className="mt-auto -mx-6 px-6 pt-4 border-t">
