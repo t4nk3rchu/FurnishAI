@@ -87,7 +87,7 @@ export default function ShoppingAssistant() {
       let docId = searchDocId;
       // If we don't have a docId, this is a new conversation
       if (!docId) {
-        const apiResponse = await fetch('https://761a4c2d3a3098f43b7b5e01c1e73dce.serveo.net/p1/initiate-vertexai-search', {
+        const apiResponse = await fetch('https://aaf30a66f73f.ngrok-free.app/p1/initiate-vertexai-search', {
           method: 'POST',
           headers: {
             'accept': 'application/json',
@@ -113,7 +113,7 @@ export default function ShoppingAssistant() {
         setSearchDocId(docId);
       } else {
         // This is a follow-up, so we need to send the existing docId
-        await fetch('https://761a4c2d3a3098f43b7b5e01c1e73dce.serveo.net/p1/initiate-vertexai-search', {
+        await fetch('https://aaf30a66f73f.ngrok-free.app/p1/initiate-vertexai-search', {
           method: 'POST',
           headers: {
             'accept': 'application/json',
