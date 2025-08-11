@@ -32,8 +32,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
 }
 
 export async function generateStaticParams() {
-  const products = await getProducts();
-  return products.map(product => ({
+  // We need all products for static generation.
+  // getProducts() with no args will now fetch all products due to our changes.
+  const { allProducts } = await getProducts(); 
+  return allProducts.map(product => ({
     id: product.id,
   }));
 }

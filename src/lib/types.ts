@@ -8,7 +8,7 @@ export interface Review {
 export interface Product {
   id: string;
   name: string;
-  category: 'Sofas' | 'Chairs' | 'Tables' | 'Beds';
+  category: 'Sofas' | 'Chair' | 'Table' | 'Bed' | string;
   price: number;
   description: string;
   imageUrl: string;
