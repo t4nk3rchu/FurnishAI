@@ -24,7 +24,7 @@ interface CatalogClientProps {
   currentPage: number;
 }
 
-const categories: string[] = ['Bath Robe', 'Chair', 'Table', 'Bed'];
+const categories: string[] = ['Bath Robe', 'Chair', 'Console Table', 'Bed'];
 
 export default function CatalogClient({ products, paginatedProducts, totalPages, currentPage }: CatalogClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
