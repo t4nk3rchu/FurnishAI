@@ -56,19 +56,19 @@
   body {
     @apply bg-background text-foreground;
   }
-  .prose table {
+  .prose .comparison-table table {
     @apply w-full my-4 border-collapse border border-border;
   }
-  .prose thead {
+  .prose .comparison-table thead {
     @apply bg-muted;
   }
-  .prose th {
+  .prose .comparison-table th {
     @apply px-4 py-2 border border-border text-left font-semibold;
   }
-  .prose td {
+  .prose .comparison-table td {
     @apply px-4 py-2 border border-border;
   }
-  .prose tr:nth-child(even) {
+  .prose .comparison-table tr:nth-child(even) {
     @apply bg-secondary/30;
   }
 }

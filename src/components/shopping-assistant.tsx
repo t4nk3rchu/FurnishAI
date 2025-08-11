@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import { Bot, Search, Sparkles, User, ShoppingCart, Check, Plus } from 'lucide-react';
+import { Bot, Search, Sparkles, User, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,9 +19,11 @@ import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import { getChatHistory, type GetChatHistoryOutput } from '@/ai/flows/get-chat-history';
-import ProductChatCard from './product-chat-card';
 import type { Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
+import ProductCarouselCard from './product-carousel-card';
+import ProductExpandedCard from './product-expanded-card';
 
 type Inputs = {
   query: string;
@@ -42,6 +44,7 @@ export default function ShoppingAssistant() {
   const [error, setError] = useState<string | null>(null);
   const [searchDocId, setSearchDocId] = useState<string | null>(null);
   const [comparisonList, setComparisonList] = useState<Product[]>([]);
+  const [expandedProduct, setExpandedProduct] = useState<Product | null>(null);
   
   const { toast } = useToast();
   const { register, handleSubmit, reset } = useForm<Inputs>();
@@ -54,7 +57,15 @@ export default function ShoppingAssistant() {
         behavior: 'smooth',
       });
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, expandedProduct]);
+  
+  useEffect(() => {
+    // When a new message with results comes in, reset the expanded view
+    if (messages.length > 0 && messages[messages.length - 1].results) {
+      setExpandedProduct(null);
+      setComparisonList([]);
+    }
+  }, [messages]);
 
   const pollForChatHistory = async (document_id: string, initialMessageCount: number, retries = 10, delay = 5000): Promise<GetChatHistoryOutput> => {
     for (let i = 0; i < retries; i++) {
@@ -93,6 +104,7 @@ export default function ShoppingAssistant() {
     setIsLoading(true);
     setError(null);
     setComparisonList([]);
+    setExpandedProduct(null);
 
     try {
       const apiResponse = await fetch('https://5ae8668d7fda.ngrok-free.app/p1/compare-products', {
@@ -125,12 +137,17 @@ export default function ShoppingAssistant() {
 
   const toggleComparison = (product: Product) => {
     setComparisonList(prev => {
-      if (prev.find(p => p.id === product.id)) {
+      const isSelected = prev.some(p => p.id === product.id);
+      if (isSelected) {
         return prev.filter(p => p.id !== product.id);
       } else {
         return [...prev, product];
       }
     });
+  };
+
+  const toggleExpanded = (product: Product) => {
+    setExpandedProduct(prev => (prev?.id === product.id ? null : product));
   };
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
@@ -221,6 +238,7 @@ export default function ShoppingAssistant() {
       setError(null);
       setSearchDocId(null);
       setComparisonList([]);
+      setExpandedProduct(null);
     }
   }
 
@@ -247,7 +265,7 @@ export default function ShoppingAssistant() {
         />
       </form>
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-5xl w-full h-[80vh] flex flex-col">
+        <DialogContent className="sm:max-w-5xl w-[75vw] h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bot className="text-primary w-6 h-6" />
@@ -272,7 +290,7 @@ export default function ShoppingAssistant() {
                     {message.message && (
                         <div className={cn("p-3 rounded-lg max-w-[80%]", message.author === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary')}>
                         {message.isHtml ? (
-                          <div className="prose" dangerouslySetInnerHTML={{ __html: message.message }} />
+                          <div className="prose comparison-table" dangerouslySetInnerHTML={{ __html: message.message }} />
                         ) : (
                           <p className="whitespace-pre-wrap text-sm">{message.message}</p>
                         )}
@@ -287,25 +305,41 @@ export default function ShoppingAssistant() {
                     )}
                   </div>
                   {message.results && message.results.length > 0 && (
-                    <div className="mt-4 flex flex-col gap-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {message.results.map(result => {
-                          const product = transformToProduct(result);
-                          const isSelected = !!comparisonList.find(p => p.id === product.id);
-                          return (
-                           <ProductChatCard 
-                             key={result.id} 
-                             product={product}
-                             isSelected={isSelected}
-                             onSelectToggle={() => toggleComparison(product)}
-                           />
-                          );
-                        })}
+                     <div className="mt-4 flex flex-col gap-4">
+                      <div className="relative">
+                        <Carousel opts={{ align: "start", dragFree: true }}>
+                          <CarouselContent className="-ml-4">
+                            {message.results.map(result => {
+                              const product = transformToProduct(result);
+                              return (
+                                <CarouselItem key={result.id} className="pl-4 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+                                  <ProductCarouselCard
+                                    product={product}
+                                    isExpanded={expandedProduct?.id === product.id}
+                                    onToggleExpand={() => toggleExpanded(product)}
+                                    isSelectedForCompare={comparisonList.some(p => p.id === product.id)}
+                                    onToggleCompare={() => toggleComparison(product)}
+                                    isAnotherExpanded={!!expandedProduct && expandedProduct.id !== product.id}
+                                  />
+                                </CarouselItem>
+                              );
+                            })}
+                          </CarouselContent>
+                          <CarouselPrevious className="absolute left-0 -translate-x-1/2 top-1/2 -translate-y-1/2 z-10" />
+                          <CarouselNext className="absolute right-0 translate-x-1/2 top-1/2 -translate-y-1/2 z-10" />
+                        </Carousel>
                       </div>
-                      {comparisonList.length > 0 && (
-                        <Button onClick={handleCompare} disabled={isLoading || isPolling}>
-                          Compare Selected ({comparisonList.length})
-                        </Button>
+                       
+                      {expandedProduct && (
+                        <ProductExpandedCard product={expandedProduct} />
+                      )}
+
+                      {comparisonList.length > 1 && (
+                        <div className="flex justify-center mt-4">
+                          <Button onClick={handleCompare} disabled={isLoading || isPolling}>
+                            Compare Selected ({comparisonList.length})
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
