@@ -1,6 +1,7 @@
 import {db} from '@/lib/firebase';
 import {collection, getDocs, doc, getDoc} from 'firebase/firestore';
 import type {Product, Review} from './types';
+import { API_BASE_URL } from '@/lib/api';
 
 interface ApiProduct {
   id: number;
@@ -51,7 +52,7 @@ async function fetchAllProducts(): Promise<Product[]> {
 
         try {
             while (currentPage <= totalPages) {
-                const response = await fetch(`https://5ae8668d7fda.ngrok-free.app/p1/get-all-products?page=${currentPage}&page_size=100`, {
+                const response = await fetch(API_BASE_URL + `p1/get-all-products?page=${currentPage}&page_size=100`, {
                     headers: {
                         'ngrok-skip-browser-warning': 'true'
                     }

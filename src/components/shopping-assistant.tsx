@@ -15,7 +15,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Skeleton } from './ui/skeleton';
-import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import { getChatHistory, type GetChatHistoryOutput } from '@/ai/flows/get-chat-history';
@@ -24,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import ProductCarouselCard from './product-carousel-card';
 import ProductExpandedCard from './product-expanded-card';
+import { API_BASE_URL } from '@/lib/api';
 
 type Inputs = {
   query: string;
@@ -107,7 +107,7 @@ export default function ShoppingAssistant() {
     setExpandedProduct(null);
 
     try {
-      const apiResponse = await fetch('https://5ae8668d7fda.ngrok-free.app/p1/compare-products', {
+      const apiResponse = await fetch(API_BASE_URL + 'p1/compare-products', {
         method: 'POST',
         headers: {
           'accept': 'text/html',
@@ -166,7 +166,7 @@ export default function ShoppingAssistant() {
     try {
       let docId = searchDocId;
       if (!docId) {
-        const apiResponse = await fetch('https://5ae8668d7fda.ngrok-free.app/p1/initiate-vertexai-search', {
+        const apiResponse = await fetch(API_BASE_URL + 'p1/initiate-vertexai-search', {
           method: 'POST',
           headers: {
             'accept': 'application/json',
@@ -192,7 +192,7 @@ export default function ShoppingAssistant() {
         }
         setSearchDocId(docId);
       } else {
-        await fetch('https://5ae8668d7fda.ngrok-free.app/p1/initiate-vertexai-search', {
+        await fetch(API_BASE_URL + 'initiate-vertexai-search', {
           method: 'POST',
           headers: {
             'accept': 'application/json',
@@ -275,7 +275,7 @@ export default function ShoppingAssistant() {
               Ask me for furniture recommendations, and I'll help you find the perfect pieces.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-1 -mx-6 px-6" ref={scrollAreaRef}>
+          <div className="flex-1 -mx-6 px-6 overflow-y-auto" ref={scrollAreaRef}>
             <div className="py-4 space-y-6 pr-4">
               {messages.map((message, index) => (
                 <div key={index}>
@@ -288,7 +288,7 @@ export default function ShoppingAssistant() {
                        </Avatar>
                     )}
                     {message.message && (
-                        <div className={cn("p-3 rounded-lg max-w-[80%]", message.author === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary')}>
+                        <div className={cn("p-3 rounded-lg max-w-[80%] break-words", message.author === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary')}>
                         {message.isHtml ? (
                           <div className="prose comparison-table" dangerouslySetInnerHTML={{ __html: message.message }} />
                         ) : (
@@ -359,7 +359,7 @@ export default function ShoppingAssistant() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
           <DialogFooter className="mt-auto -mx-6 px-6 pt-4 border-t">
              <form onSubmit={handleSubmit(onSubmit)} className="relative w-full">
               <Input
